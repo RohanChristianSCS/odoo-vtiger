@@ -39,8 +39,6 @@ class ResCompany(models.Model):
         }
 
     def sync_vtiger_products(self, company, vtiger_type):
-        print('\n\n\n---------------- sync_vtiger_products calleddd------------------')
-        # self.sync_vtiger_service_products() Merged service_product method's code into current method.
         access_key = company.get_vtiger_access_key()
         session_name = company.vtiger_login(access_key)
         qry_template = {'Products': """SELECT * FROM Products WHERE modifiedtime >= '{}';""",
@@ -81,6 +79,5 @@ class ResCompany(models.Model):
 
     def sync_vtiger_service_products(self):
         for company in self:
-            print('000000000000000000000000 PRODUCT MODULE 0000000000000000000000000000000')
             self.sync_vtiger_products(company, vtiger_type=['Products', 'Services'])
         return True

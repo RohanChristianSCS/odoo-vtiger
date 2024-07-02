@@ -120,7 +120,6 @@ class ResCompany(models.Model):
         return True
 
     def sync_vtiger_partner(self):
-        print('\n\n\n-11111111111111111111111     PARTNER MODULE 111111111111111111111111')
         for company in self:
             self.fetch_data(company, vtiger_type='Contacts')
             self.sync_vtiger_partner_vendor()
@@ -128,7 +127,6 @@ class ResCompany(models.Model):
         return True
 
     def sync_vtiger_partner_vendor(self):
-        print('\n-11111111111111111111111     PARTNER MODULE 111111111111111111111111')
         for company in self:
             self.fetch_data(company, vtiger_type='Vendors')
         return True

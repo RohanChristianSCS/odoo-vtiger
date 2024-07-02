@@ -14,12 +14,10 @@ class ResCompany(models.Model):
         return self.sync_vtiger_project()
 
     def sync_vtiger_project(self):
-        print('------ PROJECT -----------------')
         project_obj = self.env['project.project']
         partner_obj = self.env['res.partner']
         for company in self:
             # Synchronise Partner
-            company.sync_vtiger_partner()
             access_key = company.get_vtiger_access_key()
             session_name = company.vtiger_login(access_key)
             if company.last_sync_date:
@@ -34,10 +32,12 @@ class ResCompany(models.Model):
             req = Request('%s?%s' % (url, data))
             response = urlopen(req)
             result = json.loads(response.read())
-            print('--- result -------', result)
-
             if result.get('success'):
                 for res in result.get('result', []):
+                    if res.get('contactid'):
+                        partner_exist = partner_obj.search([('vtiger_id', '=', res.get('contactid'))],limit=1)
+                        if not partner_exist:
+                            company.sync_vtiger_partner()
                     project_vals = {
                         'name': res.get('projectname'),
                     }
