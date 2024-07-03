@@ -108,7 +108,6 @@ class ResCompany(models.Model):
                             'price_unit': float(price_unit or 0.00),
                             'move_id': invoice_id.id,
                             'account_id': accounts['income'].id,
-                            'tax_ids': False,
                         }
                         if res.get('invoicestatus') == "Credit Invoice":
                             invoice_id.type = 'out_refund'
@@ -124,7 +123,7 @@ class ResCompany(models.Model):
                                 limit=1).id
                             account_payment_register_rec = account_payment_register_obj.with_context(active_model='account.move', active_ids=[invoice_id.id]).create({
                                 'journal_id': journal_id,
-                                'amount': amount,
+                                'amount': invoice_id.amount_total,
                                 'payment_date': invoice_id.invoice_date,
                                 'communication': invoice_id.name,
                             })
