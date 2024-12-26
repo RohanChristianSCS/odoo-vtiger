@@ -70,9 +70,8 @@ class ResCompany(models.Model):
         product_obj = self.env["product.product"]
         account_payment_register_obj = self.env["account.payment.register"]
         res.get("hdnGrandTotal")
-        print('\n\n::::::::::::res.get("lineItems"):::::::::: ', res.get("lineItems"))
+        invoice_line_vals_dict = []
         for order_line_dict in res.get("lineItems"):
-            print('\n::::::::::::type(order_line_dict):::::::::: ', type(order_line_dict))
             if type(order_line_dict) != dict:
                 order_line_dict = res.get("lineItems").get(order_line_dict)
             product = order_line_dict.get("productid")
@@ -95,52 +94,46 @@ class ResCompany(models.Model):
                 "move_id": invoice_id.id,
                 "account_id": accounts["income"].id,
             }
-            print('----- invoice vals ------------', invoice_line_vals)
-            print('----- res.get("invoicestatus") ------------', res.get("invoicestatus"))
-            # 8/0
-            if res.get("invoicestatus") in ['Created', 'Sent']:
-                invoice_id.state = 'draft'
-            if res.get("invoicestatus") == 'Credit Invoice':
-                invoice_id.move_type = 'out_refund'
-            if not invoice_id.state == "posted":
-                invoice_id.write({"invoice_line_ids": [(0, 0, invoice_line_vals)]})
-            if res.get("invoicestatus") == 'Paid':
-                print('\n\n----- invoice id ------------', invoice_id)
-                invoice_id.action_post()
-                journal_id = (
-                    self.env["account.journal"]
-                    .search(
-                        [
-                            ("company_id", "=", self.env.company.id),
-                            ("type", "in", ("bank", "cash")),
-                        ],
-                        limit=1,
-                    )
-                    .id
+            invoice_line_vals_dict.append((0, 0, invoice_line_vals))
+        if res.get("invoicestatus") in ['Created', 'Sent']:
+            invoice_id.state = 'draft'
+        if res.get("invoicestatus") == 'Credit Invoice':
+            invoice_id.move_type = 'out_refund'
+        if not invoice_id.state == "posted":
+            invoice_id.write({"invoice_line_ids": invoice_line_vals_dict})
+        if res.get("invoicestatus") == 'Paid':
+            invoice_id.action_post()
+            journal_id = (
+                self.env["account.journal"]
+                .search(
+                    [
+                        ("company_id", "=", self.env.company.id),
+                        ("type", "in", ("bank", "cash")),
+                    ],
+                    limit=1,
                 )
-                print('-----journal_id---------', journal_id)
-                account_payment_register_rec = (
-                    account_payment_register_obj.with_context(
-                        active_model="account.move",
-                        active_ids=[invoice_id.id],
-                    ).create(
-                        {
-                            "journal_id": journal_id,
-                            "amount": invoice_id.amount_total,
-                            "payment_date": invoice_id.invoice_date,
-                            "communication": invoice_id.name,
-                        }
-                    )
+                .id
+            )
+            account_payment_register_rec = (
+                account_payment_register_obj.with_context(
+                    active_model="account.move",
+                    active_ids=[invoice_id.id],
+                ).create(
+                    {
+                        "journal_id": journal_id,
+                        "amount": invoice_id.amount_total,
+                        "payment_date": invoice_id.invoice_date,
+                        "communication": invoice_id.name,
+                    }
                 )
-                print('----account_payment_register_rec---------', account_payment_register_rec)
-                account_payment_register_rec.action_create_payments()
+            )
+            account_payment_register_rec.action_create_payments()
 
     def sync_vtiger_invoice(self):
         invoice_obj = self.env["account.move"]
         partner_obj = self.env["res.partner"]
         user_obj = self.env["res.users"]
         for company in self:
-            print('------ company ----------', company)
             access_key = company.get_vtiger_access_key()
             session_name = company.vtiger_login(access_key)
             qry = self._build_query_invoice(company)
@@ -148,7 +141,6 @@ class ResCompany(models.Model):
             if result.get("success") and self.env.user.company_id == company:
                 self.delete_existing_invoice(result)
                 for res in result.get("result", []):
-                    print('\n\n::::::::::::::: res :::::::::::::', res)
                     # _get_partner will sync partner, if not exist
                     self._get_partner(res, company)
                     invoice_vals = {}
@@ -161,7 +153,6 @@ class ResCompany(models.Model):
                             partner = partner_obj.search(
                                 [("vtiger_id", "=", contact_id)], limit=1
                             )
-                            print(':::::::::::::::: Partner :::::::::::::::', partner)
                             if partner:
                                 invoice_vals.update({"partner_id": partner.id})
                         else:
@@ -192,7 +183,6 @@ class ResCompany(models.Model):
                             }
                         ),
                         invoice_id = invoice_obj.create(invoice_vals)
-                        print('::::::::: invoice id :::::::::::::::::', invoice_id)
 
                     self._sync_invoice_lines(res, invoice_id, company)
         return True

@@ -211,7 +211,6 @@ class ResCompany(models.Model):
             order_id = sale_order_obj.search(
                 [("vtiger_id", "=", res.get("id"))], limit=1
             )
-            print('delete lineeee =======================', order_id)
             if order_id:
                 order_id.order_line.unlink()
         return True
@@ -244,7 +243,6 @@ class ResCompany(models.Model):
         product_obj = self.env["product.product"]
         netprice = res.get("hdnGrandTotal")
         if res.get("lineItems"):
-            print('=============================Sale order line method==========================================')
             for order_line_dict in res.get("lineItems"):
                 if type(order_line_dict) != dict:
                     order_line_dict = res.get("lineItems").get(order_line_dict)
@@ -282,14 +280,10 @@ class ResCompany(models.Model):
         result = self._execute_vtiger_query_sales(company, qry, session_name)
         if result.get("success"):
             for res in result.get("result", []):
-                print('\n\n res ====================================', res)
-                print('\n Vtiger type ====================================', vtiger_type)
-                print('\n res.get("quotestage") ====================================', res.get("quotestage"))
                 if res.get("contact_id") and vtiger_type == "SalesOrder":
                     partner_exist = partner_obj.search(
                         [("vtiger_id", "=", res.get("contact_id"))], limit=1
                     )
-                    print('partner exist =====================', partner_exist)
                     if not partner_exist:
                         company.sync_vtiger_partner()
                 if res.get("quotestage") == "New" or vtiger_type == "SalesOrder":
@@ -298,7 +292,6 @@ class ResCompany(models.Model):
                     )
                     if order_id.state != 'sale':
                         self.update_existing_sale_order_and_quotes(result)
-                    print('order_id====================', order_id)
                     so_order_vals = {}
                     if not order_id:
                         contact_id = res.get("contact_id")
@@ -351,18 +344,14 @@ class ResCompany(models.Model):
                                 }
                             ),
                         order_id = sale_order_obj.create(so_order_vals)
-                        print('------ order id ========', order_id)
                     if order_id.state != 'sale':
                         self._sync_sale_order_line(res, order_id, company)
-                    print('========= vtiger_type, res.get("sostatus"), order_id.state ===============',vtiger_type, res.get("sostatus"), order_id.state)
                     if (vtiger_type == "SalesOrder" and res.get("sostatus") == "Approved" and order_id.state != 'sale'):
-                        print('\n\n====== action confirm ====================')
                         order_id.sudo().action_confirm()
             return True
 
     def sync_vtiger_sale_order(self):
         for company in self:
-            print('------ company --------', company, self.env.user.company_id)
             if self.env.user.company_id == company:
                 company.fetch_so_and_quotes_data(company, vtiger_type="SalesOrder")
                 company.sync_vtiger_sale_Quotes()
