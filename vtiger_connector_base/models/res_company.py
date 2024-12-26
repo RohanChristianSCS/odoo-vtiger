@@ -54,7 +54,7 @@ class ResCompany(models.Model):
 
     @api.model
     def sync_vtiger(self):
-        return self.search([]).action_sync_vtiger()
+        return self.search(['&',('user_name', '!=', False), ('access_key', '!=', False), ('vtiger_server', '!=', False)]).action_sync_vtiger()
 
     def action_sync_vtiger(self):
         #TODO: If we need multi-company, here we have to update code.
